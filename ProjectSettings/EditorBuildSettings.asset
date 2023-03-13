@@ -4,5 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/_vending_machine/Scenes/Game.unity
+    guid: f8cf2709704244812a85860133f4692b
   m_configObjects: {}
