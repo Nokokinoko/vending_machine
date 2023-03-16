@@ -1,4 +1,4 @@
-using Cysharp.Threading.Tasks;
+using System;
 using UniRx;
 using UnityEngine;
 
@@ -8,6 +8,10 @@ public class UIManager : MonoBehaviour
     [SerializeField] private ScoreUI m_ScoreUI;
     [SerializeField] private IngameUI m_IngameUI;
     [SerializeField] private EndUI m_EndUI;
+
+    public void EnableButtonReload(bool enable) => m_IngameUI.EnableButtonReload(enable);
+
+    public IObservable<Unit> RxOnReload => m_IngameUI.RxOnReload;
 
     private void Awake()
     {
