@@ -1,4 +1,5 @@
 using TMPro;
+using UniRx;
 using UnityEngine;
 
 public class ScoreUI : MonoBehaviour
@@ -11,7 +12,16 @@ public class ScoreUI : MonoBehaviour
 
     private void Awake()
     {
-        m_TextScore.text = PrevTextScore + "0";
-        m_TextHiScore.text = PrevTextHiScore + SaveData.Score;
+        UpdateScore();
+        m_TextHiScore.text = PrevTextHiScore + SaveData.HiScore;
+
+        this.ObserveEveryValueChanged(_ => PlayData.Score)
+            .Subscribe(_ => UpdateScore())
+            .AddTo(this);
+    }
+
+    private void UpdateScore()
+    {
+        m_TextScore.text = PrevTextScore + PlayData.Score;
     }
 }

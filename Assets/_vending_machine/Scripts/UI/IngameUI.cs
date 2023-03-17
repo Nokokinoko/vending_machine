@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 public class IngameUI : MonoBehaviour
 {
-    [SerializeField] private List<Image> m_ListHearts = new List<Image>();
+    [SerializeField] private List<Image> m_ListHearts = new List<Image>(GameDefinitions.MaxLife);
     
     [Space]
     [SerializeField] private Sprite m_Heart;
@@ -18,15 +18,9 @@ public class IngameUI : MonoBehaviour
 
     [Space]
     [SerializeField] private TextMeshProUGUI m_TextShoot;
-    [SerializeField] private ShootManager m_MgrShoot;
 
     [Space]
     [SerializeField] private Button m_ButtonReload;
-
-    public void EnableButtonReload(bool enable) => m_ButtonReload.interactable = enable;
-
-    private int m_MaxLife;
-    private int m_Life;
     
     private readonly Subject<Unit> m_RxOnReload = new Subject<Unit>();
     public IObservable<Unit> RxOnReload => m_RxOnReload.AsObservable();
@@ -35,26 +29,27 @@ public class IngameUI : MonoBehaviour
 
     private void Awake()
     {
-        m_MaxLife = m_Life = m_ListHearts.Count;
         UpdateHeart();
         UpdateShoot();
 
-        this.ObserveEveryValueChanged(_ => m_MgrShoot.NumShoot)
-            .Subscribe(_ => UpdateShoot())
-            .AddTo(this);
+        this.ObserveEveryValueChanged(_ => PlayData.Bullet)
+            .Subscribe(_ => {
+                UpdateShoot();
+                m_ButtonReload.interactable = !PlayData.IsMaxBullet;
+            }).AddTo(this);
 
         m_ButtonReload.OnClickAsObservable()
             .Subscribe(_ => {
-                EnableButtonReload(false);
+                m_ButtonReload.interactable = false;
                 m_RxOnReload.OnNext(Unit.Default);
             }).AddTo(this);
     }
 
     private void UpdateHeart()
     {
-        for (int i = 0; i < m_MaxLife; i++)
+        for (int i = 0; i < GameDefinitions.MaxLife; i++)
         {
-            bool _isLife = (i < m_Life);
+            bool _isLife = (i < PlayData.Life);
             m_ListHearts[i].sprite = _isLife ? m_Heart : m_Heartbreak;
             m_ListHearts[i].color = _isLife ? m_ColorHeart : m_ColorHeartbreak;
         }
@@ -62,15 +57,14 @@ public class IngameUI : MonoBehaviour
 
     private void UpdateShoot()
     {
-        m_TextShoot.text = PrevTextShoot + m_MgrShoot.NumShoot;
+        m_TextShoot.text = PrevTextShoot + PlayData.Bullet;
     }
 
     public void OnDamage()
     {
-        m_Life--;
-        if (m_Life <= 0)
+        PlayData.DecrementLife();
+        if (PlayData.IsZeroLife)
         {
-            m_Life = 0;
             GameEventManager.Notify(GameEvent.GameDead);
         }
 
@@ -79,8 +73,7 @@ public class IngameUI : MonoBehaviour
 
     public void OnLifeUp()
     {
-        m_Life++;
-        m_Life = Mathf.Min(m_Life, m_MaxLife);
+        PlayData.IncrementLife();
         
         UpdateHeart();
     }

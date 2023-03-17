@@ -27,10 +27,6 @@ public class GameSceneConductor : MonoBehaviour
         m_CtrlPlayer.RxOnRotateFwd
             .Subscribe(_ => m_VCRun.enabled = true)
             .AddTo(this);
-
-        this.ObserveEveryValueChanged(_ => m_CtrlPlayer.IsMaxShoot)
-            .Subscribe(_isMax => m_MgrUI.EnableButtonReload(!_isMax))
-            .AddTo(this);
     }
 
     private async UniTask Start()

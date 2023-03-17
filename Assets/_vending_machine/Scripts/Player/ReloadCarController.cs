@@ -33,8 +33,8 @@ public class ReloadCarController : MonoBehaviour
     {
         await UniTask.Delay(TimeSpan.FromSeconds(DelayReload));
         
-        CtrlPlayer.ShootIncrement();
-        if (CtrlPlayer.IsMaxShoot)
+        PlayData.IncrementBullet();
+        if (PlayData.IsMaxBullet)
         {
             OutReload();
         }

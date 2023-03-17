@@ -12,10 +12,8 @@ public class ImageTargetController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI m_TextReload;
     
     private Image m_ImageTarget;
-    public bool CanShoot => m_ImageTarget.enabled;
-    public Vector2 PositionShoot => m_ImageTarget.rectTransform.localPosition;
-    
-    private Vector2 m_Range;
+    public bool CanShoot => m_ImageTarget && m_ImageTarget.enabled;
+    public Vector2 PositionShoot => m_ImageTarget.rectTransform.position;
 
     private Vector2 m_TouchBegan = Vector2.zero;
     private bool IsTouchBeganZero => m_TouchBegan == Vector2.zero;
@@ -45,12 +43,23 @@ public class ImageTargetController : MonoBehaviour
         m_ImageTarget.enabled = false;
         m_TextReload.gameObject.SetActive(false);
 
-        m_Range = m_Scaler.referenceResolution * 0.5f;
-
         this.UpdateAsObservable()
             .Where(_ => m_CanTarget)
-            .Subscribe(_ => TouchProcess())
-            .AddTo(this);
+            .Subscribe(_ => {
+                if (PlayData.IsZeroBullet)
+                {
+                    ShowReload(); // リロードが押下されるまで表示
+                }
+                else
+                {
+                    HideReload();
+                    
+                    if (m_CanTarget)
+                    {
+                        TouchProcess();
+                    }
+                }
+            }).AddTo(this);
     }
 
     private void TouchProcess()
@@ -59,7 +68,7 @@ public class ImageTargetController : MonoBehaviour
         {
             case ENUM_TOUCH.TOUCH_BEGAN:
                 m_TouchBegan = InputManager.GetPosition();
-                m_ImageTarget.rectTransform.localPosition = m_TouchBegan;
+                m_ImageTarget.rectTransform.position = m_TouchBegan;
                 m_ImageTarget.enabled = true;
                 break;
             case ENUM_TOUCH.TOUCH_MOVED:
@@ -75,7 +84,7 @@ public class ImageTargetController : MonoBehaviour
                     _position.y += _dist * Mathf.Sin(_tuple.radian);
                     _position = InRange(_position);
                     
-                    m_ImageTarget.rectTransform.localPosition = _position;
+                    m_ImageTarget.rectTransform.position = _position;
                 }
             }
                 break;
@@ -103,16 +112,16 @@ public class ImageTargetController : MonoBehaviour
 
     private Vector2 InRange(Vector2 vec2)
     {
-        vec2.x = Mathf.Max(vec2.x, -m_Range.x);
-        vec2.x = Mathf.Min(vec2.x, m_Range.x);
+        vec2.x = Mathf.Max(vec2.x, 0.0f);
+        vec2.x = Mathf.Min(vec2.x, m_Scaler.referenceResolution.x);
         
-        vec2.y = Mathf.Max(vec2.y, -m_Range.y);
-        vec2.y = Mathf.Min(vec2.y, m_Range.y);
+        vec2.y = Mathf.Max(vec2.y, 0.0f);
+        vec2.y = Mathf.Min(vec2.y, m_Scaler.referenceResolution.y);
 
         return vec2;
     }
 
-    public void ShowReload()
+    private void ShowReload()
     {
         if (m_TextReload.gameObject.activeSelf)
         {
@@ -133,9 +142,14 @@ public class ImageTargetController : MonoBehaviour
             .SetLoops(-1, LoopType.Restart);
     }
 
-    public void HideReload()
+    private void HideReload()
     {
         m_Seq?.Kill();
+        
+        if (!m_TextReload.gameObject.activeSelf)
+        {
+            return; // 既に非表示済み
+        }
 
         m_TextReload.gameObject.SetActive(false);
     }

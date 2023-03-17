@@ -1,28 +1,31 @@
+using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class ShootManager : MonoBehaviour
 {
-    private int m_NumShoot = GameDefinitions.MaxShoot;
-    public int NumShoot => m_NumShoot;
+    [SerializeField] private List<Transform> m_ListBullet = new List<Transform>();
 
-    public bool IsMax => GameDefinitions.MaxShoot <= m_NumShoot;
-    public bool IsZero => m_NumShoot <= 0;
+    private Camera m_Camera;
+    
+    public PlayerController CtrlPlayer { private get; set; }
 
-    public void Increment()
+    private const float Power = 80.0f;
+
+    private void Awake()
     {
-        m_NumShoot++;
-        m_NumShoot = Mathf.Min(m_NumShoot, GameDefinitions.MaxShoot);
+        m_Camera = Camera.main;
     }
 
-    public void DoShoot(Vector2 position)
+    public void DoShoot()
     {
-        if (IsZero)
-        {
-            return;
-        }
-        
-        // decrement
-        m_NumShoot--;
-        m_NumShoot = Mathf.Max(m_NumShoot, 0);
+        int _rand = Random.Range(0, m_ListBullet.Count);
+        Transform _bullet = Instantiate(m_ListBullet[_rand], transform);
+
+        Ray _ray = m_Camera.ScreenPointToRay(CtrlPlayer.PositionShoot);
+        Vector3 _dir = _ray.direction;
+        _bullet.GetComponent<BulletController>().Shoot(_dir.normalized * Power);
+
+        PlayData.DecrementBullet();
     }
 }

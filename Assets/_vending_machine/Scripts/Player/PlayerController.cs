@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using UniRx;
 using UniRx.Triggers;
@@ -11,50 +13,57 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private ReloadCarController m_CtrlCar;
     [SerializeField] private ImageTargetController m_CtrlTarget;
 
+    public Vector2 PositionShoot => m_CtrlTarget.PositionShoot;
+
     private Transform m_Xform;
     private bool m_MoveZ = false;
     private Sequence m_Seq;
+
+    private CancellationTokenSource m_Cts;
     
     private readonly Subject<Unit> m_RxOnRotateFwd = new Subject<Unit>();
     public IObservable<Unit> RxOnRotateFwd => m_RxOnRotateFwd.AsObservable();
 
     private const float MovePositionZ = 0.05f;
-    private const float MoveRotationZ = 2.0f;
-    private const float DurationRotationZ = 1.0f;
     private const float DurationRotate = 0.5f;
-
-    public bool IsMaxShoot => m_MgrShoot.IsMax;
-    public bool IsZeroShoot => m_MgrShoot.IsZero;
-    public void ShootIncrement() => m_MgrShoot.Increment();
+    private const float MoveRotationZ = 2.0f;
+    private const float DurationRotationZ = 0.5f;
+    
+    private const float DelayShoot = 1.5f;
 
     private void Awake()
     {
+        m_MgrShoot.CtrlPlayer = this;
         m_CtrlCar.CtrlPlayer = this;
         m_Xform = transform;
+
+        this.UpdateAsObservable()
+            .Where(_ => m_MoveZ)
+            .Subscribe(_ => {
+                Vector3 _position = m_Xform.position;
+                _position.z += MovePositionZ;
+                m_Xform.position = _position;
+            }).AddTo(this);
+
+        m_Cts = new CancellationTokenSource();
         
         GameEventManager.OnReceivedAsObservable(GameEvent.GameStart)
             .Subscribe(_ => RotateAndMove())
             .AddTo(this);
 
-        this.UpdateAsObservable()
-            .Subscribe(_ => {
-                if (m_MoveZ)
-                {
-                    Vector3 _position = m_Xform.position;
-                    _position.z += MovePositionZ;
-                    m_Xform.position = _position;
-                }
+        GameEventManager.OnReceivedAsObservable(GameEvent.GameDead)
+            .Subscribe(_ => m_Cts.Cancel())
+            .AddTo(this);
 
-                if (IsZeroShoot)
-                {
-                    m_CtrlTarget.ShowReload(); // リロードが押下されるまで表示
-                }
+        GameEventManager.OnReceivedAsObservable(GameEvent.GameTimeUp)
+            .Subscribe(_ => m_Cts.Cancel())
+            .AddTo(this);
+        
+        Shoot(m_Cts.Token).Forget();
 
-                if (m_CtrlTarget.CanShoot)
-                {
-                    m_MgrShoot.DoShoot(m_CtrlTarget.PositionShoot);
-                }
-            }).AddTo(this);
+        this.OnDestroyAsObservable()
+            .Subscribe(_ => m_Cts.Dispose())
+            .AddTo(this);
     }
 
     public void RotateAndMove()
@@ -83,11 +92,22 @@ public class PlayerController : MonoBehaviour
     {
         m_MoveZ = false;
         m_CtrlTarget.CanTarget = false;
-        m_CtrlTarget.HideReload();
         m_Seq?.Kill();
         
         m_Model.DOLocalRotate(new Vector3(0.0f, 180.0f, 0.0f), DurationRotate)
             .SetEase(Ease.Linear)
             .OnComplete(() => m_CtrlCar.InReload());
+    }
+
+    private async UniTask Shoot(CancellationToken token)
+    {
+        while (true)
+        {
+            await UniTask.WaitUntil(() => m_CtrlTarget.CanShoot && !PlayData.IsZeroBullet, cancellationToken: token);
+
+            m_MgrShoot.DoShoot();
+
+            await UniTask.Delay(TimeSpan.FromSeconds(DelayShoot), cancellationToken: token);
+        }
     }
 }
