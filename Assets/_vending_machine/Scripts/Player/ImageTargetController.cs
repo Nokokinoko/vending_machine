@@ -34,6 +34,7 @@ public class ImageTargetController : MonoBehaviour
 
     private Sequence m_Seq;
 
+    private const float UnderY = 300.0f;
     private const float DurationFade = 0.3f;
     private const float DelayFade = 1.0f;
 
@@ -67,9 +68,17 @@ public class ImageTargetController : MonoBehaviour
         switch (InputManager.GetTouch())
         {
             case ENUM_TOUCH.TOUCH_BEGAN:
-                m_TouchBegan = InputManager.GetPosition();
+            {
+                Vector2 _position = InputManager.GetPosition();
+                if (_position.y < UnderY)
+                {
+                    break;
+                }
+                
+                m_TouchBegan = _position;
                 m_ImageTarget.rectTransform.position = m_TouchBegan;
                 m_ImageTarget.enabled = true;
+            }
                 break;
             case ENUM_TOUCH.TOUCH_MOVED:
             {

@@ -13,7 +13,7 @@ public class ReloadCarController : MonoBehaviour
     private const float DefaultPositionX = 4.0f;
     private const float ArrivalPositionX = 0.4f;
     private const float DurationArrival = 0.8f;
-    private const float DelayReload = 1.0f;
+    private const float DelayReload = 0.2f;
 
     private void Awake()
     {
@@ -34,6 +34,8 @@ public class ReloadCarController : MonoBehaviour
         await UniTask.Delay(TimeSpan.FromSeconds(DelayReload));
         
         PlayData.IncrementBullet();
+        CtrlPlayer.PunchScale();
+        
         if (PlayData.IsMaxBullet)
         {
             OutReload();

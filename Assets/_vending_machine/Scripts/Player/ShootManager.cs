@@ -10,7 +10,7 @@ public class ShootManager : MonoBehaviour
     
     public PlayerController CtrlPlayer { private get; set; }
 
-    private const float Power = 80.0f;
+    private const float Power = 100.0f;
 
     private void Awake()
     {

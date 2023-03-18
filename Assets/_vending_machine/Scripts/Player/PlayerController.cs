@@ -21,6 +21,9 @@ public class PlayerController : MonoBehaviour
 
     private CancellationTokenSource m_Cts;
     
+    public float PositionFloatZ => m_Xform.position.z;
+    public int PositionIntZ => Mathf.FloorToInt(PositionFloatZ);
+    
     private readonly Subject<Unit> m_RxOnRotateFwd = new Subject<Unit>();
     public IObservable<Unit> RxOnRotateFwd => m_RxOnRotateFwd.AsObservable();
 
@@ -28,8 +31,10 @@ public class PlayerController : MonoBehaviour
     private const float DurationRotate = 0.5f;
     private const float MoveRotationZ = 2.0f;
     private const float DurationRotationZ = 0.5f;
+
+    private const float DurationPunchScale = 0.2f;
     
-    private const float DelayShoot = 1.5f;
+    private const float DelayShoot = 1.0f;
 
     private void Awake()
     {
@@ -97,6 +102,11 @@ public class PlayerController : MonoBehaviour
         m_Model.DOLocalRotate(new Vector3(0.0f, 180.0f, 0.0f), DurationRotate)
             .SetEase(Ease.Linear)
             .OnComplete(() => m_CtrlCar.InReload());
+    }
+
+    public void PunchScale()
+    {
+        m_Model.DOPunchScale(Vector3.one * 0.01f, DurationPunchScale);
     }
 
     private async UniTask Shoot(CancellationToken token)
