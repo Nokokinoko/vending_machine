@@ -43,8 +43,10 @@ public class StageCreator : MonoBehaviour
 
     private void CheckPlayerPosition()
     {
-        // create
         int _z = m_CtrlPlayer.PositionIntZ;
+        PlayData.SetScore(_z);
+        
+        // create
         if (m_RoadZ <= _z + BorderCreate)
         {
             CreateRoad();

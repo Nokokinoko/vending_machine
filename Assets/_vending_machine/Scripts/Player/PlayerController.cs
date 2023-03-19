@@ -12,6 +12,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private ShootManager m_MgrShoot;
     [SerializeField] private ReloadCarController m_CtrlCar;
     [SerializeField] private ImageTargetController m_CtrlTarget;
+    [SerializeField] private EnemyManager m_MgrEnemy;
 
     public Vector2 PositionShoot => m_CtrlTarget.PositionShoot;
 
@@ -21,8 +22,8 @@ public class PlayerController : MonoBehaviour
 
     private CancellationTokenSource m_Cts;
     
-    public float PositionFloatZ => m_Xform.position.z;
-    public int PositionIntZ => Mathf.FloorToInt(PositionFloatZ);
+    public int PositionIntZ => Mathf.FloorToInt(m_Xform.position.z);
+    public int PositionDivideZ => Mathf.FloorToInt(PositionIntZ / GameDefinitions.IntervalEnemy);
     
     private readonly Subject<Unit> m_RxOnRotateFwd = new Subject<Unit>();
     public IObservable<Unit> RxOnRotateFwd => m_RxOnRotateFwd.AsObservable();
@@ -48,6 +49,18 @@ public class PlayerController : MonoBehaviour
                 Vector3 _position = m_Xform.position;
                 _position.z += MovePositionZ;
                 m_Xform.position = _position;
+            }).AddTo(this);
+
+        this.ObserveEveryValueChanged(_ => m_MgrEnemy.HasEncountEnemy())
+            .Subscribe(_encount => {
+                if (_encount)
+                {
+                    Stop();
+                }
+                else
+                {
+                    Move();
+                }
             }).AddTo(this);
 
         m_Cts = new CancellationTokenSource();
@@ -95,13 +108,20 @@ public class PlayerController : MonoBehaviour
 
     public void StopAndRotate()
     {
-        m_MoveZ = false;
+        Stop();
         m_CtrlTarget.CanTarget = false;
-        m_Seq?.Kill();
         
         m_Model.DOLocalRotate(new Vector3(0.0f, 180.0f, 0.0f), DurationRotate)
             .SetEase(Ease.Linear)
             .OnComplete(() => m_CtrlCar.InReload());
+    }
+
+    private void Stop()
+    {
+        m_MoveZ = false;
+        m_Seq?.Kill();
+
+        m_Model.DOLocalRotate(Vector3.zero, DurationRotationZ).SetEase(Ease.Linear);
     }
 
     public void PunchScale()

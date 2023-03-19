@@ -17,7 +17,7 @@ GameObject:
   - component: {fileID: 8449442480857467351}
   m_Layer: 0
   m_Name: EnergyDrink
-  m_TagString: bullet
+  m_TagString: Bullet
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

@@ -17,7 +17,7 @@ GameObject:
   - component: {fileID: 2285403228061024784}
   m_Layer: 0
   m_Name: OliveOil
-  m_TagString: bullet
+  m_TagString: Bullet
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

@@ -24,9 +24,9 @@ public static class PlayData
         m_Bullet = GameDefinitions.MaxBullet;
     }
 
-    public static void AddScore(int add)
+    public static void SetScore(int score)
     {
-        m_Score += add;
+        m_Score = Mathf.Max(m_Score, score);
     }
 
     public static void IncrementLife()
