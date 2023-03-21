@@ -9,19 +9,43 @@ using UnityEngine;
 
 [RequireComponent(typeof(Animator))]
 [RequireComponent(typeof(Collider))]
+[RequireComponent(typeof(Rigidbody))]
 public abstract class AbstractEnemy : MonoBehaviour
 {
-    [SerializeField] private int m_Life;
-    [SerializeField] private List<Material> m_ListMaterial = new List<Material>();
+    [SerializeField] protected List<Material> m_ListMaterial = new List<Material>(GameDefinitions.MaxEnemyLife);
 
+    [Space]
+    [SerializeField] protected SkinnedMeshRenderer m_Renderer;
+    
     [Space]
     [SerializeField] private float m_IntervalAttack;
     [SerializeField] private TextMeshPro m_TextDanger;
+    
+    private int m_Life;
 
     private bool m_MoveZ = true;
-    public bool IsEncount => !m_MoveZ;
+    private bool m_IsAttacking = false;
+    public bool IsAttacking => m_IsAttacking;
 
-    private Transform m_Xform;
+    private List<AbstractEnemy> m_ListAttached;
+    public List<AbstractEnemy> ListAttached
+    {
+        set
+        {
+            // EnemyManagerが管理する所属List
+            m_ListAttached = value;
+
+            // 所属数が減ったなら進行フラグを立てる
+            this.ObserveEveryValueChanged(_ => m_ListAttached.Count)
+                .Pairwise()
+                .Where(pair => pair.Current < pair.Previous)
+                .Subscribe(_ => m_MoveZ = true)
+                .AddTo(this);
+        }
+    }
+
+    protected Transform m_Xform;
+    private float PositionZ => m_Xform.localPosition.z;
     private Animator m_Animator;
     private Collider m_Collider;
 
@@ -30,12 +54,12 @@ public abstract class AbstractEnemy : MonoBehaviour
     private readonly Subject<Unit> m_RxOnDeath = new Subject<Unit>();
     public IObservable<Unit> RxOnDeath => m_RxOnDeath.AsObservable();
 
-    private const float MovePositionZ = -0.02f;
+    private const float MovePositionZ = -0.05f;
     
     private const string BoolIdle = "Idle";
     
-    private const float Danger = 3.0f;
-    private const string TriggerAttack = "Attack";
+    private const float Danger = 2.0f;
+    private const string BoolAttack = "Attack";
     private const string StateAttack = "Attack";
     
     private const string StateDeath = "Death";
@@ -47,10 +71,6 @@ public abstract class AbstractEnemy : MonoBehaviour
         m_Animator = GetComponent<Animator>();
         m_Collider = GetComponent<Collider>();
 
-        m_Life = Mathf.Max(m_Life, 1);
-        m_Life = Mathf.Min(m_Life, m_ListMaterial.Count);
-        UpdateMaterial();
-
         m_Cts = new CancellationTokenSource();
         
         m_Collider.OnTriggerEnterAsObservable()
@@ -60,10 +80,15 @@ public abstract class AbstractEnemy : MonoBehaviour
                     if (_collider.gameObject.CompareTag(GameDefinitions.TagBullet))
                     {
                         m_Life--;
+                        Destroy(_collider.gameObject);
 
                         if (m_Life <= 0)
                         {
                             ToDeath().Forget();
+                        }
+                        else
+                        {
+                            UpdateMaterial();
                         }
                     }
                     
@@ -79,32 +104,74 @@ public abstract class AbstractEnemy : MonoBehaviour
         
         this.UpdateAsObservable()
             .Where(_ => m_MoveZ)
-            .Subscribe(_ => {
-                Vector3 _position = m_Xform.position;
-                _position.z += MovePositionZ;
-                m_Xform.position = _position;
-            }).AddTo(this);
+            .Subscribe(_ => Move())
+            .AddTo(this);
         
         this.OnDestroyAsObservable()
             .Subscribe(_ => m_Cts.Dispose())
             .AddTo(this);
+
+        GameEventManager.OnReceivedAsObservable(GameEvent.GameDead)
+            .Subscribe(_ => m_Cts.Cancel())
+            .AddTo(this);
     }
 
+    private void Move()
+    {
+        if (IsAttacking)
+        {
+            // 攻撃位置まで到達していたなら進行しない
+            m_MoveZ = false;
+            return;
+        }
+        
+        float _prev = 0.0f;
+        foreach (AbstractEnemy _enemy in m_ListAttached)
+        {
+            if (_enemy.PositionZ < PositionZ)
+            {
+                _prev = Mathf.Max(_prev, _enemy.PositionZ);
+            }
+        }
+
+        if (0.0f < _prev && PositionZ <= _prev + GameDefinitions.IntervalEnemy)
+        {
+            ToIdle();
+            return;
+        }
+
+        if (m_Animator.GetBool(BoolIdle))
+        {
+            m_Animator.SetBool(BoolIdle, false);
+        }
+        
+        Vector3 _position = m_Xform.localPosition;
+        _position.z += MovePositionZ;
+        m_Xform.localPosition = _position;
+    }
+
+    public void SetEnemyLife(int life)
+    {
+        m_Life = life;
+        m_Life = Mathf.Max(m_Life, 1);
+        m_Life = Mathf.Min(m_Life, m_ListMaterial.Count);
+        UpdateMaterial();
+    }
+
+    protected Material GetMaterialByLife() => m_ListMaterial[m_Life - 1];
+
     protected abstract void UpdateMaterial();
-    protected abstract bool HasIdle();
 
     private void ToIdle()
     {
         m_MoveZ = false;
-        
-        if (HasIdle())
-        {
-            m_Animator.SetBool(BoolIdle, true);
-        }
+        m_Animator.SetBool(BoolIdle, true);
     }
 
     private async UniTask ToAttack(CancellationToken token)
     {
+        m_IsAttacking = true;
+        
         while (true)
         {
             await UniTask.Delay(TimeSpan.FromSeconds(m_IntervalAttack), cancellationToken: token);
@@ -113,7 +180,7 @@ public abstract class AbstractEnemy : MonoBehaviour
 
             await UniTask.Delay(TimeSpan.FromSeconds(Danger), cancellationToken: token);
             
-            m_Animator.SetTrigger(TriggerAttack);
+            m_Animator.SetBool(BoolAttack, true);
 
             await UniTask.WaitUntil(
                 () => m_Animator.GetCurrentAnimatorStateInfo(0).IsName(StateAttack), cancellationToken: token
@@ -124,6 +191,8 @@ public abstract class AbstractEnemy : MonoBehaviour
             );
             
             PlayData.DecrementLife();
+            m_Animator.SetBool(BoolAttack, false);
+            m_TextDanger.gameObject.SetActive(false);
         }
     }
     
@@ -137,8 +206,8 @@ public abstract class AbstractEnemy : MonoBehaviour
 
         if (HasDeath())
         {
-            m_Animator.Play(StateDeath);
             Fall();
+            m_Animator.Play(StateDeath);
             
             await UniTask.WaitUntil(() => m_Animator.GetCurrentAnimatorStateInfo(0).IsName(StateDeath));
 

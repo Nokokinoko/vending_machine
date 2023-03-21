@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using Cinemachine;
 using TMPro;
 using UniRx;
 using UnityEngine;
 using UnityEngine.UI;
 
+[RequireComponent(typeof(CinemachineImpulseSource))]
 public class IngameUI : MonoBehaviour
 {
     [SerializeField] private List<Image> m_ListHearts = new List<Image>(GameDefinitions.MaxLife);
@@ -21,7 +23,9 @@ public class IngameUI : MonoBehaviour
 
     [Space]
     [SerializeField] private Button m_ButtonReload;
-    
+
+    private CinemachineImpulseSource m_Impulse;
+
     private readonly Subject<Unit> m_RxOnReload = new Subject<Unit>();
     public IObservable<Unit> RxOnReload => m_RxOnReload.AsObservable();
 
@@ -29,8 +33,14 @@ public class IngameUI : MonoBehaviour
 
     private void Awake()
     {
+        m_Impulse = GetComponent<CinemachineImpulseSource>();
+        
         UpdateHeart();
         UpdateShoot();
+
+        this.ObserveEveryValueChanged(_ => PlayData.Life)
+            .Subscribe(_ => OnDamage())
+            .AddTo(this);
 
         this.ObserveEveryValueChanged(_ => PlayData.Bullet)
             .Subscribe(_ => {
@@ -60,21 +70,14 @@ public class IngameUI : MonoBehaviour
         m_TextShoot.text = PrevTextShoot + PlayData.Bullet;
     }
 
-    public void OnDamage()
+    private void OnDamage()
     {
-        PlayData.DecrementLife();
+        m_Impulse.GenerateImpulse();
+        
+        UpdateHeart();
         if (PlayData.IsZeroLife)
         {
             GameEventManager.Notify(GameEvent.GameDead);
         }
-
-        UpdateHeart();
-    }
-
-    public void OnLifeUp()
-    {
-        PlayData.IncrementLife();
-        
-        UpdateHeart();
     }
 }

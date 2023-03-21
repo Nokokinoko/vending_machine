@@ -6,7 +6,6 @@ public enum GameEvent
 {
     GameStart,
     GameDead,
-    GameTimeUp,
 }
 
 public static class GameEventManager

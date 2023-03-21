@@ -1,4 +1,5 @@
 using System;
+using Cysharp.Threading.Tasks;
 using UniRx;
 using UnityEngine;
 
@@ -27,11 +28,6 @@ public class UIManager : MonoBehaviour
             .OnReceivedAsObservable(GameEvent.GameDead)
             .Subscribe(_ => End())
             .AddTo(this);
-
-        GameEventManager
-            .OnReceivedAsObservable(GameEvent.GameTimeUp)
-            .Subscribe(_ => End())
-            .AddTo(this);
         
         //AdsManager.Instance.LoadInter();
         //AdsManager.Instance.ShowBanner();
@@ -54,6 +50,6 @@ public class UIManager : MonoBehaviour
         m_IngameUI.gameObject.SetActive(false);
         m_EndUI.gameObject.SetActive(true);
         
-        //m_EndUI.Enable(m_GameUI.GetScoreValue()).Forget();
+        m_EndUI.Enable().Forget();
     }
 }

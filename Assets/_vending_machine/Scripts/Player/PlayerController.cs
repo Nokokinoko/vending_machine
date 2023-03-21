@@ -21,9 +21,9 @@ public class PlayerController : MonoBehaviour
     private Sequence m_Seq;
 
     private CancellationTokenSource m_Cts;
-    
-    public int PositionIntZ => Mathf.FloorToInt(m_Xform.position.z);
-    public int PositionDivideZ => Mathf.FloorToInt(PositionIntZ / GameDefinitions.IntervalEnemy);
+
+    public float PositionFloatZ => m_Xform.position.z;
+    public int PositionIntZ => Mathf.FloorToInt(PositionFloatZ);
     
     private readonly Subject<Unit> m_RxOnRotateFwd = new Subject<Unit>();
     public IObservable<Unit> RxOnRotateFwd => m_RxOnRotateFwd.AsObservable();
@@ -41,6 +41,7 @@ public class PlayerController : MonoBehaviour
     {
         m_MgrShoot.CtrlPlayer = this;
         m_CtrlCar.CtrlPlayer = this;
+        m_MgrEnemy.CtrlPlayer = this;
         m_Xform = transform;
 
         this.UpdateAsObservable()
@@ -51,7 +52,8 @@ public class PlayerController : MonoBehaviour
                 m_Xform.position = _position;
             }).AddTo(this);
 
-        this.ObserveEveryValueChanged(_ => m_MgrEnemy.HasEncountEnemy())
+        this.ObserveEveryValueChanged(_ => m_MgrEnemy.HasAttackingEnemy())
+            .Where(_ => m_MoveZ)
             .Subscribe(_encount => {
                 if (_encount)
                 {
@@ -70,10 +72,6 @@ public class PlayerController : MonoBehaviour
             .AddTo(this);
 
         GameEventManager.OnReceivedAsObservable(GameEvent.GameDead)
-            .Subscribe(_ => m_Cts.Cancel())
-            .AddTo(this);
-
-        GameEventManager.OnReceivedAsObservable(GameEvent.GameTimeUp)
             .Subscribe(_ => m_Cts.Cancel())
             .AddTo(this);
         
