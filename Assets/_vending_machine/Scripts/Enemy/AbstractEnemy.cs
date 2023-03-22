@@ -54,7 +54,7 @@ public abstract class AbstractEnemy : MonoBehaviour
     private readonly Subject<Unit> m_RxOnDeath = new Subject<Unit>();
     public IObservable<Unit> RxOnDeath => m_RxOnDeath.AsObservable();
 
-    private const float MovePositionZ = -0.05f;
+    private const float MovePositionZ = -0.1f;
     
     private const string BoolIdle = "Idle";
     
@@ -74,31 +74,28 @@ public abstract class AbstractEnemy : MonoBehaviour
         m_Cts = new CancellationTokenSource();
         
         m_Collider.OnTriggerEnterAsObservable()
-            .Subscribe(
-                _collider =>
+            .Subscribe(_collider => {
+                if (_collider.gameObject.CompareTag(GameDefinitions.TagBullet))
                 {
-                    if (_collider.gameObject.CompareTag(GameDefinitions.TagBullet))
-                    {
-                        m_Life--;
-                        Destroy(_collider.gameObject);
+                    m_Life--;
+                    Destroy(_collider.gameObject);
 
-                        if (m_Life <= 0)
-                        {
-                            ToDeath().Forget();
-                        }
-                        else
-                        {
-                            UpdateMaterial();
-                        }
-                    }
-                    
-                    if (_collider.gameObject.CompareTag(GameDefinitions.TagPlayer))
+                    if (m_Life <= 0)
                     {
-                        ToIdle();
-                        ToAttack(m_Cts.Token).Forget();
+                        ToDeath().Forget();
                     }
-                })
-            .AddTo(this);
+                    else
+                    {
+                        UpdateMaterial();
+                    }
+                }
+                    
+                if (_collider.gameObject.CompareTag(GameDefinitions.TagPlayer))
+                {
+                    ToIdle();
+                    ToAttack(m_Cts.Token).Forget();
+                }
+            }).AddTo(this);
         
         m_TextDanger.gameObject.SetActive(false);
         
@@ -112,7 +109,11 @@ public abstract class AbstractEnemy : MonoBehaviour
             .AddTo(this);
 
         GameEventManager.OnReceivedAsObservable(GameEvent.GameDead)
-            .Subscribe(_ => m_Cts.Cancel())
+            .Subscribe(_ => {
+                m_Cts.Cancel();
+                m_MoveZ = false;
+                m_IsAttacking = false;
+            })
             .AddTo(this);
     }
 
@@ -187,12 +188,17 @@ public abstract class AbstractEnemy : MonoBehaviour
             );
 
             await UniTask.WaitUntil(
-                () => 1.0f <= m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime, cancellationToken: token
+                () => 0.8f <= m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime, cancellationToken: token
             );
             
             PlayData.DecrementLife();
-            m_Animator.SetBool(BoolAttack, false);
             m_TextDanger.gameObject.SetActive(false);
+
+            await UniTask.WaitUntil(
+                () => 1.0f <= m_Animator.GetCurrentAnimatorStateInfo(0).normalizedTime, cancellationToken: token
+            );
+            
+            m_Animator.SetBool(BoolAttack, false);
         }
     }
     
@@ -201,6 +207,8 @@ public abstract class AbstractEnemy : MonoBehaviour
     private async UniTask ToDeath()
     {
         m_Cts.Cancel();
+        m_MoveZ = false;
+        m_IsAttacking = false;
         m_Collider.enabled = false;
         m_TextDanger.gameObject.SetActive(false);
 

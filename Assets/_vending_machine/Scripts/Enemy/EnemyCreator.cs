@@ -13,9 +13,8 @@ public class EnemyCreator : MonoBehaviour
     public AbstractEnemy Create()
     {
         int _score = PlayData.Score;
-        List<Transform> _list = new List<Transform>();
-        _list.Add(m_PrefabFrog);
-        
+        List<Transform> _list = new List<Transform> { m_PrefabFrog };
+
         int _valKind = Mathf.FloorToInt((float)_score / IntervalKind);
         switch (_valKind)
         {

@@ -1,11 +1,13 @@
 using System;
 using System.Threading;
+using Cinemachine;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using UniRx;
 using UniRx.Triggers;
 using UnityEngine;
 
+[RequireComponent(typeof(CinemachineImpulseSource))]
 public class PlayerController : MonoBehaviour
 {
     [SerializeField] private Transform m_Model;
@@ -17,8 +19,11 @@ public class PlayerController : MonoBehaviour
     public Vector2 PositionShoot => m_CtrlTarget.PositionShoot;
 
     private Transform m_Xform;
+    private bool m_Start = false;
     private bool m_MoveZ = false;
     private Sequence m_Seq;
+
+    private CinemachineImpulseSource m_Impulse;
 
     private CancellationTokenSource m_Cts;
 
@@ -44,6 +49,10 @@ public class PlayerController : MonoBehaviour
         m_MgrEnemy.CtrlPlayer = this;
         m_Xform = transform;
 
+        m_Impulse = GetComponent<CinemachineImpulseSource>();
+
+        m_Cts = new CancellationTokenSource();
+
         this.UpdateAsObservable()
             .Where(_ => m_MoveZ)
             .Subscribe(_ => {
@@ -52,27 +61,26 @@ public class PlayerController : MonoBehaviour
                 m_Xform.position = _position;
             }).AddTo(this);
 
-        this.ObserveEveryValueChanged(_ => m_MgrEnemy.HasAttackingEnemy())
-            .Where(_ => m_MoveZ)
-            .Subscribe(_encount => {
-                if (_encount)
-                {
-                    Stop();
-                }
-                else
-                {
-                    Move();
-                }
-            }).AddTo(this);
+        this.ObserveEveryValueChanged(_ => PlayData.Life)
+            .Where(_ => PlayData.Life < GameDefinitions.MaxLife)
+            .Subscribe(_ => m_Impulse.GenerateImpulse())
+            .AddTo(this);
 
-        m_Cts = new CancellationTokenSource();
+        this.ObserveEveryValueChanged(_ => m_MgrEnemy.HasAttackingEnemy())
+            .Where(_ => m_Start)
+            .Subscribe(_encount => Move(_encount))
+            .AddTo(this);
         
         GameEventManager.OnReceivedAsObservable(GameEvent.GameStart)
             .Subscribe(_ => RotateAndMove())
             .AddTo(this);
 
         GameEventManager.OnReceivedAsObservable(GameEvent.GameDead)
-            .Subscribe(_ => m_Cts.Cancel())
+            .Subscribe(_ => {
+                m_Cts.Cancel();
+                m_CtrlTarget.CanTarget = false;
+                m_Start = false;
+            })
             .AddTo(this);
         
         Shoot(m_Cts.Token).Forget();
@@ -82,17 +90,37 @@ public class PlayerController : MonoBehaviour
             .AddTo(this);
     }
 
+    private void Move(bool encount)
+    {
+        if (encount)
+        {
+            Stop();
+        }
+        else
+        {
+            GoFwd();
+        }
+    }
+
     public void RotateAndMove()
     {
         m_RxOnRotateFwd.OnNext(Unit.Default);
         
         m_Model.DOLocalRotate(Vector3.zero, DurationRotate)
             .SetEase(Ease.Linear)
-            .OnComplete(() => Move());
+            .OnComplete(() => {
+                m_Start = true; // 初回のみ有効化
+                Move(m_MgrEnemy.HasAttackingEnemy());
+            });
     }
 
-    private void Move()
+    private void GoFwd()
     {
+        if (m_MoveZ)
+        {
+            return;
+        }
+        
         m_MoveZ = true;
         m_CtrlTarget.CanTarget = true;
 
@@ -116,6 +144,11 @@ public class PlayerController : MonoBehaviour
 
     private void Stop()
     {
+        if (!m_MoveZ)
+        {
+            return;
+        }
+
         m_MoveZ = false;
         m_Seq?.Kill();
 

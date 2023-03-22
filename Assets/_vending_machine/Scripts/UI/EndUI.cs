@@ -25,8 +25,10 @@ public class EndUI : MonoBehaviour
 
         m_ButtonRetry.OnClickAsObservable()
             .First()
-            .Subscribe(_ => ReloadManager.Instance.Reload())
-            .AddTo(this);
+            .Subscribe(_ => {
+                PlayData.Init();
+                ReloadManager.Instance.Reload();
+            }).AddTo(this);
     }
 
     public async UniTask Enable()
