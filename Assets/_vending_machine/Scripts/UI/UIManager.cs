@@ -29,13 +29,13 @@ public class UIManager : MonoBehaviour
             .Subscribe(_ => End())
             .AddTo(this);
         
-        //AdsManager.Instance.LoadInter();
-        //AdsManager.Instance.ShowBanner();
+        AdsManager.Instance.LoadInter();
+        AdsManager.Instance.ShowBanner();
     }
 
     private void Ingame()
     {
-        //AdsManager.Instance.HideBanner();
+        AdsManager.Instance.HideBanner();
         
         m_Tutorial.SetActive(false);
         m_ScoreUI.gameObject.SetActive(true);

@@ -51,7 +51,7 @@ public class EndUI : MonoBehaviour
 
         await UniTask.Delay(TimeSpan.FromSeconds(DurationFade));
 
-        //AdsManager.Instance.ShowInter();
+        AdsManager.Instance.ShowInter();
         m_ButtonRetry.gameObject.SetActive(true);
     }
 }
