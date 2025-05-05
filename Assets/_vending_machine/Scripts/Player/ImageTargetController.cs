@@ -34,7 +34,7 @@ public class ImageTargetController : MonoBehaviour
 
     private Sequence m_Seq;
 
-    private const float UnderY = 300.0f;
+    private const float UnderY = 150.0f;
     private const float DurationFade = 0.3f;
     private const float DelayFade = 1.0f;
 

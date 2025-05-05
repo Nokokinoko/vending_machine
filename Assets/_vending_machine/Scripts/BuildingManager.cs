@@ -7,7 +7,7 @@ public class BuildingManager : MonoBehaviour
 {
     private List<Transform> m_List = new List<Transform>();
 
-    private const float MoveZ = -10.0f;
+    private const float MoveZ = 10.0f;
     private const float Interval = 50.0f;
     
     private void Awake()

@@ -4,36 +4,15 @@ public static class InputManager
 {
 	public static ENUM_TOUCH GetTouch()
 	{
-		if (Application.isEditor)
-		{
-			if (Input.GetMouseButtonDown(0)) { return ENUM_TOUCH.TOUCH_BEGAN; }
-			if (Input.GetMouseButton(0)) { return ENUM_TOUCH.TOUCH_MOVED; }
-			if (Input.GetMouseButtonUp(0)) { return ENUM_TOUCH.TOUCH_ENDED; }
-		}
-		else
-		{
-			if (0 < Input.touchCount)
-			{
-				return (ENUM_TOUCH)(int)Input.GetTouch(0).phase;
-			}
-		}
+		if (Input.GetMouseButtonDown(0)) { return ENUM_TOUCH.TOUCH_BEGAN; }
+		if (Input.GetMouseButton(0)) { return ENUM_TOUCH.TOUCH_MOVED; }
+		if (Input.GetMouseButtonUp(0)) { return ENUM_TOUCH.TOUCH_ENDED; }
 		return ENUM_TOUCH.TOUCH_NONE;
 	}
 
 	public static Vector2 GetPosition()
 	{
-		if (Application.isEditor)
-		{
-			if (GetTouch() != ENUM_TOUCH.TOUCH_NONE) { return Input.mousePosition; }
-		}
-		else
-		{
-			if (0 < Input.touchCount)
-			{
-				Touch _Touch = Input.GetTouch(0);
-				return _Touch.position;
-			}
-		}
+		if (GetTouch() != ENUM_TOUCH.TOUCH_NONE) { return Input.mousePosition; }
 		return Vector2.zero;
 	}
 }
