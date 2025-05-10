@@ -1698,6 +1698,7 @@ GameObject:
   m_Component:
   - component: {fileID: 488870232}
   - component: {fileID: 488870233}
+  - component: {fileID: 488870234}
   m_Layer: 0
   m_Name: GameSceneConductor
   m_TagString: Untagged
@@ -1735,6 +1736,18 @@ MonoBehaviour:
   m_VCRun: {fileID: 886777920}
   m_MgrUI: {fileID: 1454954882}
   m_CtrlPlayer: {fileID: 2033483736}
+--- !u!114 &488870234
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 488870231}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 48e825e5fd72433d9f47f7d4541a2645, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &511794181
 GameObject:
   m_ObjectHideFlags: 0
